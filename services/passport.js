@@ -1,7 +1,7 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const keys = require("../config/keys");
 const mongoose = require("mongoose");
+const keys = require("../config/keys");
 
 const User = mongoose.model("users");
 
@@ -23,27 +23,15 @@ passport.use(
       callbackURL: "/auth/google/callback",
       proxy: true,
     },
-    (accessToken, refreshToken, profile, done) => {
-      User.findOne({ googleId: profile.id }).then(
-        (existingUser) => {
-          if (existingUser) {
-            // znači već imamo taj zapis, zovemo done metodu da signaliziramo kraj
-            done(null, existingUser);
-          } else {
-            // ne postoji pa ga kreiraj
-            new User({
-              googleId: profile.id,
-            })
-              .save()
-              .then((user) => done(null, user));
-          }
-        }
+    async (accessToken, refreshToken, profile, done) => {
+      const existingUser = await User.findOne({ googleId: profile.id });
 
-        // dohvati user details
-        // console.log("accessToken", accessToken);
-        // console.log("refreshToken", refreshToken);
-        // console.log("profile", profile);
-      );
+      if (existingUser) {
+        return done(null, existingUser);
+      }
+
+      const user = await new User({ googleId: profile.id }).save();
+      done(null, user);
     }
   )
 );
